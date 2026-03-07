@@ -39,8 +39,10 @@ public struct Challenge has key {
     points: u64,
     arweave_tx_id: String,
     flag_hash: u256,
-    solvers: vector<address>,
+    solvers: Table<address, SolverMarker>,
 }
+
+public struct SolverMarker has copy, drop, store {}
 
 public struct ChallRegCaps has key {
     id: UID,
@@ -144,15 +146,7 @@ fun verify_flag(
 }
 
 fun has_solver(challenge: &Challenge, solver: address): bool {
-    let len = challenge.solvers.length();
-    let mut i = 0;
-    while (i < len) {
-        if (challenge.solvers[i] == solver) {
-            return true
-        };
-        i = i + 1;
-    };
-    false
+    challenge.solvers.contains(solver)
 }
 
 fun solve_challenge_internal(
@@ -258,7 +252,7 @@ entry fun register_challenge_to_ctf(
         points,
         arweave_tx_id,
         flag_hash,
-        solvers: vector::empty(),
+        solvers: table::new(ctx),
     };
     let author_cap = ChallengeAuthor { id: object::new(ctx), chall_id: object::id(&challenge) };
 
@@ -282,7 +276,7 @@ entry fun register_challenge_standalone(
         points,
         arweave_tx_id,
         flag_hash,
-        solvers: vector::empty(),
+        solvers: table::new(ctx),
     };
     let author_cap = ChallengeAuthor { id: object::new(ctx), chall_id: object::id(&challenge) };
 
