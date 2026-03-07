@@ -155,6 +155,17 @@ fun has_solver(challenge: &Challenge, solver: address): bool {
     false
 }
 
+fun solve_challenge_internal(
+    challenge: &mut Challenge,
+    verifier: &FlagVerifier,
+    proof_bytes: vector<u8>,
+    solver: address,
+) {
+    assert!(verifier.verify_flag(proof_bytes, challenge.flag_hash, solver), E_INVALID_FLAG_PROOF);
+    assert!(!has_solver(challenge, solver), E_ALREADY_SOLVED);
+    challenge.solvers.add(solver, SolverMarker {});
+}
+
 // ============ Entry Functions ============
 
 entry fun create_ctf(
@@ -285,12 +296,7 @@ entry fun submit_flag_to_challenge(
     proof_bytes: vector<u8>,
     ctx: &TxContext,
 ) {
-    assert!(
-        verifier.verify_flag(proof_bytes, challenge.flag_hash, ctx.sender()),
-        E_INVALID_FLAG_PROOF,
-    );
-    assert!(!has_solver(challenge, ctx.sender()), E_ALREADY_SOLVED);
-    challenge.solvers.push_back(ctx.sender());
+    solve_challenge_internal(challenge, verifier, proof_bytes, ctx.sender());
 }
 
 entry fun submit_flag_to_ctf(
@@ -305,7 +311,7 @@ entry fun submit_flag_to_ctf(
     assert!(ctf.start_time <= now_ms, E_CTF_NOT_STARTED);
     assert!(now_ms <= ctf.end_time, E_CTF_ENDED);
     assert!(challenge.ctf_id == option::some(object::id(ctf)), E_CHALLENGE_NOT_IN_CTF);
-    submit_flag_to_challenge(challenge, verifier, proof_bytes, ctx);
+    solve_challenge_internal(challenge, verifier, proof_bytes, ctx.sender());
 
     if (!ctf.scoreboard.contains(ctx.sender())) {
         ctf.scoreboard.add(ctx.sender(), 0);
