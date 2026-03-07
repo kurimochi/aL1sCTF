@@ -28,7 +28,6 @@ public struct CTF has key {
     arweave_tx_id: String,
     start_time: u64,
     end_time: u64,
-    challenges: vector<ID>,
     scoreboard: Table<address, u64>,
 }
 
@@ -180,7 +179,6 @@ entry fun create_ctf(
         arweave_tx_id,
         start_time,
         end_time,
-        challenges: vector::empty(),
         scoreboard: table::new(ctx),
     };
     let admin_cap = CTFAdmin { id: object::new(ctx), ctf_id: object::id(&ctf) };
@@ -226,7 +224,7 @@ entry fun batch_grant_chall_reg_cap(
 }
 
 entry fun register_challenge_to_ctf(
-    ctf: &mut CTF,
+    ctf: &CTF,
     title: String,
     points: u64,
     arweave_tx_id: String,
@@ -255,8 +253,6 @@ entry fun register_challenge_to_ctf(
         solvers: table::new(ctx),
     };
     let author_cap = ChallengeAuthor { id: object::new(ctx), chall_id: object::id(&challenge) };
-
-    ctf.challenges.push_back(object::id(&challenge));
 
     transfer::share_object(challenge);
     transfer::public_transfer(author_cap, ctx.sender());
