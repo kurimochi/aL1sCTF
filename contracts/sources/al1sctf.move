@@ -18,6 +18,7 @@ const E_CTF_NOT_STARTED: u64 = 8;
 const E_CTF_ENDED: u64 = 9;
 const E_CHALLENGE_NOT_IN_CTF: u64 = 10;
 const E_INVALID_ALLOWANCE_AMOUNT: u64 = 11;
+const E_CHALL_REG_CAP_MISMATCH: u64 = 12;
 
 // ============ Structs ============
 
@@ -237,7 +238,7 @@ entry fun register_challenge_to_ctf(
     cap: ChallRegCap,
     ctx: &mut TxContext,
 ) {
-    assert!(cap.ctf_id == object::id(ctf), E_ADMIN_CAP_MISMATCH);
+    assert!(cap.ctf_id == object::id(ctf), E_CHALL_REG_CAP_MISMATCH);
     assert!(cap.allowance > 0, E_CHALLENGE_REG_CAP_EXHAUSTED);
 
     let remaining = cap.allowance - 1;
