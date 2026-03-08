@@ -224,6 +224,11 @@ entry fun batch_grant_chall_reg_caps(
     let mut i = 0;
     while (i < len) {
         assert!(amount[i] > 0, E_INVALID_ALLOWANCE_AMOUNT);
+        i = i + 1;
+    };
+
+    i = 0;
+    while (i < len) {
         grant_chall_reg_cap_internal(admin_cap, recipients[i], amount[i], ctx);
         i = i + 1;
     }
