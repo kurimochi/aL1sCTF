@@ -213,23 +213,23 @@ entry fun batch_grant_chall_reg_caps(
     ctf: &CTF,
     admin_cap: &CTFAdmin,
     recipients: vector<address>,
-    amount: vector<u64>,
+    amounts: vector<u64>,
     ctx: &mut TxContext,
 ) {
     assert!(object::id(ctf) == admin_cap.ctf_id, E_ADMIN_CAP_MISMATCH);
 
     let len = recipients.length();
-    assert!(len == amount.length(), E_LENGTH_MISMATCH);
+    assert!(len == amounts.length(), E_LENGTH_MISMATCH);
 
     let mut i = 0;
     while (i < len) {
-        assert!(amount[i] > 0, E_INVALID_ALLOWANCE_AMOUNT);
+        assert!(amounts[i] > 0, E_INVALID_ALLOWANCE_AMOUNT);
         i = i + 1;
     };
 
     i = 0;
     while (i < len) {
-        grant_chall_reg_cap_internal(admin_cap, recipients[i], amount[i], ctx);
+        grant_chall_reg_cap_internal(admin_cap, recipients[i], amounts[i], ctx);
         i = i + 1;
     }
 }
@@ -248,7 +248,7 @@ entry fun register_challenge_to_ctf(
 
     let remaining = cap.allowance - 1;
 
-    if (remaining >  0) {
+    if (remaining > 0) {
         let mut mutable_cap = cap;
         mutable_cap.allowance = remaining;
         transfer::public_transfer(mutable_cap, ctx.sender());
