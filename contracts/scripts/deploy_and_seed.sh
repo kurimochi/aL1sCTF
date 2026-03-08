@@ -208,7 +208,6 @@ PUBLISH_JSON="$(sui client publish . --gas-budget "$GAS_BUDGET" --sender "$SENDE
 
 PACKAGE_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "published") | .packageId' | head -n1)"
 UPGRADE_CAP_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("0x2::package::UpgradeCap$"))) | .objectId' | head -n1)"
-CHALL_REG_CAPS_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::ChallRegCaps$"))) | .objectId' | head -n1)"
 FLAG_VERIFIER_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::FlagVerifier$"))) | .objectId' | head -n1)"
 
 echo "==> create ctf"
@@ -225,21 +224,23 @@ CTF_ID="$(printf '%s' "$CREATE_CTF_JSON" | jq -r '.objectChanges[] | select(.typ
 CTF_ADMIN_CAP_ID="$(printf '%s' "$CREATE_CTF_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::CTFAdmin$"))) | .objectId' | head -n1)"
 
 echo "==> grant one registration allowance to sender"
-sui client call \
+GRANT_CHALL_REG_CAP_JSON="$(sui client call \
   --package "$PACKAGE_ID" \
   --module al1sctf \
-  --function batch_grant_chall_reg_cap \
-  --args "$CTF_ID" "$CHALL_REG_CAPS_ID" "$CTF_ADMIN_CAP_ID" "[$SENDER]" "[1]" \
+  --function batch_grant_chall_reg_caps \
+  --args "$CTF_ID" "$CTF_ADMIN_CAP_ID" "[$SENDER]" "[1]" \
   --gas-budget "$GAS_BUDGET" \
   --sender "$SENDER" \
-  --json >/dev/null
+  --json)"
+
+CHALL_REG_CAP_ID="$(printf '%s' "$GRANT_CHALL_REG_CAP_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::ChallRegCap$"))) | .objectId' | head -n1)"
 
 echo "==> register ctf challenge"
 CREATE_CTF_CHALLENGE_JSON="$(sui client call \
   --package "$PACKAGE_ID" \
   --module al1sctf \
   --function register_challenge_to_ctf \
-  --args "$CTF_ID" "$CTF_CHALLENGE_TITLE" "$CTF_CHALLENGE_POINTS" "$CTF_CHALLENGE_ARWEAVE" "$CTF_CHALLENGE_FLAG_HASH" "$CHALL_REG_CAPS_ID" \
+  --args "$CTF_ID" "$CTF_CHALLENGE_TITLE" "$CTF_CHALLENGE_POINTS" "$CTF_CHALLENGE_ARWEAVE" "$CTF_CHALLENGE_FLAG_HASH" "$CHALL_REG_CAP_ID" \
   --gas-budget "$GAS_BUDGET" \
   --sender "$SENDER" \
   --json)"
@@ -267,7 +268,6 @@ NETWORK=${NETWORK}
 SENDER=${SENDER}
 PACKAGE_ID=${PACKAGE_ID}
 UPGRADE_CAP_ID=${UPGRADE_CAP_ID}
-CHALL_REG_CAPS_ID=${CHALL_REG_CAPS_ID}
 FLAG_VERIFIER_ID=${FLAG_VERIFIER_ID}
 CTF_ID=${CTF_ID}
 CTF_ADMIN_CAP_ID=${CTF_ADMIN_CAP_ID}

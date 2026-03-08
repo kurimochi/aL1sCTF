@@ -126,7 +126,6 @@ echo "==> publish package and create seed objects"
 PUBLISH_JSON="$(sui client publish . --gas-budget "$GAS_BUDGET" --sender "$SENDER" --json)"
 
 PACKAGE_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "published") | .packageId' | head -n1)"
-CHALL_REG_CAPS_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::ChallRegCaps$"))) | .objectId' | head -n1)"
 FLAG_VERIFIER_ID="$(printf '%s' "$PUBLISH_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::FlagVerifier$"))) | .objectId' | head -n1)"
 
 NOW_MS=$(( $(date +%s) * 1000 ))
@@ -145,20 +144,22 @@ CREATE_CTF_JSON="$(sui client call \
 CTF_ID="$(printf '%s' "$CREATE_CTF_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::CTF$"))) | .objectId' | head -n1)"
 CTF_ADMIN_CAP_ID="$(printf '%s' "$CREATE_CTF_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::CTFAdmin$"))) | .objectId' | head -n1)"
 
-sui client call \
+GRANT_CHALL_REG_CAP_JSON="$(sui client call \
   --package "$PACKAGE_ID" \
   --module al1sctf \
-  --function batch_grant_chall_reg_cap \
-  --args "$CTF_ID" "$CHALL_REG_CAPS_ID" "$CTF_ADMIN_CAP_ID" "[$SENDER]" "[10]" \
+  --function batch_grant_chall_reg_caps \
+  --args "$CTF_ID" "$CTF_ADMIN_CAP_ID" "[$SENDER]" "[10]" \
   --gas-budget "$GAS_BUDGET" \
   --sender "$SENDER" \
-  --json >/dev/null
+  --json)"
+
+CHALL_REG_CAP_ID="$(printf '%s' "$GRANT_CHALL_REG_CAP_JSON" | jq -r '.objectChanges[] | select(.type == "created" and (.objectType | test("::al1sctf::ChallRegCap$"))) | .objectId' | head -n1)"
 
 CREATE_CTF_CHALLENGE_JSON="$(sui client call \
   --package "$PACKAGE_ID" \
   --module al1sctf \
   --function register_challenge_to_ctf \
-  --args "$CTF_ID" "seed-ctf-challenge" "100" "seed-ctf-challenge-meta" "$SUBMIT_FLAG_HASH" "$CHALL_REG_CAPS_ID" \
+  --args "$CTF_ID" "seed-ctf-challenge" "100" "seed-ctf-challenge-meta" "$SUBMIT_FLAG_HASH" "$CHALL_REG_CAP_ID" \
   --gas-budget "$GAS_BUDGET" \
   --sender "$SENDER" \
   --json)"
@@ -214,22 +215,33 @@ DRY_CHANGE_CTF_ARWEAVE="$(sui client call \
   --json)"
 report_line "change_ctf_arweave_tx_id" "$DRY_CHANGE_CTF_ARWEAVE"
 
-DRY_BATCH_GRANT="$(sui client call \
+DRY_GRANT_SINGLE="$(sui client call \
   --package "$PACKAGE_ID" \
   --module al1sctf \
-  --function batch_grant_chall_reg_cap \
-  --args "$CTF_ID" "$CHALL_REG_CAPS_ID" "$CTF_ADMIN_CAP_ID" "[$SENDER]" "[1]" \
+  --function grant_chall_reg_cap \
+  --args "$CTF_ID" "$CTF_ADMIN_CAP_ID" "$SENDER" "1" \
   --gas-budget "$GAS_BUDGET" \
   --sender "$SENDER" \
   --dry-run \
   --json)"
-report_line "batch_grant_chall_reg_cap" "$DRY_BATCH_GRANT"
+report_line "grant_chall_reg_cap" "$DRY_GRANT_SINGLE"
+
+DRY_BATCH_GRANT="$(sui client call \
+  --package "$PACKAGE_ID" \
+  --module al1sctf \
+  --function batch_grant_chall_reg_caps \
+  --args "$CTF_ID" "$CTF_ADMIN_CAP_ID" "[$SENDER]" "[1]" \
+  --gas-budget "$GAS_BUDGET" \
+  --sender "$SENDER" \
+  --dry-run \
+  --json)"
+report_line "batch_grant_chall_reg_caps" "$DRY_BATCH_GRANT"
 
 DRY_REGISTER_CTF_CHALL="$(sui client call \
   --package "$PACKAGE_ID" \
   --module al1sctf \
   --function register_challenge_to_ctf \
-  --args "$CTF_ID" "report-ctf-challenge" "200" "report-ctf-chall-meta" "0x3" "$CHALL_REG_CAPS_ID" \
+  --args "$CTF_ID" "report-ctf-challenge" "200" "report-ctf-chall-meta" "0x3" "$CHALL_REG_CAP_ID" \
   --gas-budget "$GAS_BUDGET" \
   --sender "$SENDER" \
   --dry-run \
@@ -274,7 +286,7 @@ echo "==> context ids"
 echo "PACKAGE_ID=$PACKAGE_ID"
 echo "CTF_ID=$CTF_ID"
 echo "CTF_ADMIN_CAP_ID=$CTF_ADMIN_CAP_ID"
-echo "CHALL_REG_CAPS_ID=$CHALL_REG_CAPS_ID"
+echo "CHALL_REG_CAP_ID=$CHALL_REG_CAP_ID"
 echo "CTF_CHALLENGE_ID=$CTF_CHALLENGE_ID"
 echo "STANDALONE_CHALLENGE_ID=$STANDALONE_CHALLENGE_ID"
 echo "FLAG_VERIFIER_ID=$FLAG_VERIFIER_ID"
