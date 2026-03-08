@@ -17,6 +17,7 @@ const E_ALREADY_SOLVED: u64 = 7;
 const E_CTF_NOT_STARTED: u64 = 8;
 const E_CTF_ENDED: u64 = 9;
 const E_CHALLENGE_NOT_IN_CTF: u64 = 10;
+const E_INVALID_ALLOWANCE_AMOUNT: u64 = 11;
 
 // ============ Structs ============
 
@@ -202,6 +203,7 @@ entry fun grant_chall_reg_cap(
     ctx: &mut TxContext,
 ) {
     assert!(object::id(ctf) == admin_cap.ctf_id, E_ADMIN_CAP_MISMATCH);
+    assert!(amount > 0, E_INVALID_ALLOWANCE_AMOUNT);
 
     grant_chall_reg_cap_internal(admin_cap, recipient, amount, ctx);
 }
@@ -220,6 +222,7 @@ entry fun batch_grant_chall_reg_caps(
 
     let mut i = 0;
     while (i < len) {
+        assert!(amount[i] > 0, E_INVALID_ALLOWANCE_AMOUNT);
         grant_chall_reg_cap_internal(admin_cap, recipients[i], amount[i], ctx);
         i = i + 1;
     }
